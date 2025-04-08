@@ -1,0 +1,172 @@
+¡Claro! Podemos adaptar los colores de la aplicación a tonos lilas, rosas y azul pastel, además de permitir que estos colores sean editables para personalizar la aplicación. Para hacer esto, te propongo agregar algunas variables de CSS al inicio del archivo y luego permitir que el usuario cambie estos valores a través de un formulario.
+
+### Cambios que se harán:
+1. **Variables de colores**: Utilizaremos variables de CSS para definir los colores principales de la interfaz.
+2. **Formulario de personalización**: Añadiremos un pequeño formulario para permitir que el usuario elija colores para personalizar la apariencia de la aplicación.
+3. **Colores predeterminados**: Estableceremos colores predeterminados como lilas, rosas y azul pastel.
+
+Aquí te dejo el código actualizado:
+
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historia Clínica Estética</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --color-primary: #D3A6FF; /* Lila */
+      --color-secondary: #FFB6C1; /* Rosa Pastel */
+      --color-accent: #B3E0FF; /* Azul Pastel */
+      --color-text: #333;
+    }
+
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+    .header { text-align: center; padding: 20px; background-color: var(--color-primary); color: white; border-radius: 10px; margin-bottom: 30px; }
+    .header img { width: 150px; margin-bottom: 20px; }
+    .header h1 { font-size: 2em; }
+    .header p { font-size: 1.2em; margin-top: 10px; }
+    .form-section, .photo-section, .consent-section, .historial-section, .servicio-section { margin-bottom: 30px; padding: 15px; border: 1px solid #ccc; border-radius: 10px; }
+    label { display: block; margin-top: 10px; color: var(--color-text); }
+    input, textarea, select { width: 100%; padding: 8px; margin-top: 5px; }
+    .signature-pad { border: 1px solid #ccc; margin-top: 10px; }
+    .btn { margin-top: 10px; padding: 10px 15px; background: var(--color-secondary); color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn:hover { background: var(--color-accent); }
+    .photo-preview img { max-width: 100px; margin-right: 10px; }
+    .historia-item { border-top: 1px dashed #aaa; margin-top: 10px; padding-top: 10px; }
+    .servicio-item { margin-top: 5px; }
+    .print-btn { background-color: #2196F3; margin-left: 10px; }
+    .customize-section { margin-top: 30px; padding: 20px; background: #f0f0f0; border-radius: 10px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+
+  <!-- Portada con Logo, Misión y Visión -->
+  <div class="header">
+    <img src="https://via.placeholder.com/150" alt="Logo de la Clínica">
+    <h1>Bienvenido a la Clínica Estética</h1>
+    <p><strong>Misión:</strong> Brindar tratamientos estéticos de alta calidad que resalten la belleza natural, con un enfoque integral y personalizado.</p>
+    <p><strong>Visión:</strong> Ser la clínica estética líder en la región, reconocida por nuestra excelencia, innovación y atención al cliente.</p>
+  </div>
+
+  <!-- Sección de Personalización de Colores -->
+  <div class="customize-section">
+    <h3>Personaliza la Aplicación</h3>
+    <label for="colorPrimary">Color Principal (Lila):</label>
+    <input type="color" id="colorPrimary" value="#D3A6FF">
+
+    <label for="colorSecondary">Color Secundario (Rosa Pastel):</label>
+    <input type="color" id="colorSecondary" value="#FFB6C1">
+
+    <label for="colorAccent">Color de Acento (Azul Pastel):</label>
+    <input type="color" id="colorAccent" value="#B3E0FF">
+
+    <button class="btn" onclick="guardarColores()">Guardar Cambios</button>
+  </div>
+
+  <div class="servicio-section">
+    <h3>Definir Plantillas de Consentimiento por Servicio</h3>
+    <label for="nombreServicio">Nombre del Servicio</label>
+    <input type="text" id="nombreServicio">
+
+    <label for="consentimientoServicio">Texto del Consentimiento</label>
+    <textarea id="consentimientoServicio" rows="5"></textarea>
+
+    <button class="btn" onclick="guardarPlantillaConsentimiento()">Guardar Plantilla</button>
+    <div id="plantillasGuardadas"></div>
+  </div>
+
+  <div class="form-section">
+    <h3>Historia Clínica</h3>
+    <label for="nombrePaciente">Nombre del Paciente</label>
+    <input type="text" id="nombrePaciente">
+
+    <label for="selectServicio">Seleccionar Servicio</label>
+    <select id="selectServicio" onchange="cargarConsentimientoServicio()">
+      <option value="">-- Selecciona --</option>
+    </select>
+
+    <label for="consentimientoGenerado">Consentimiento Informado (editable)</label>
+    <textarea id="consentimientoGenerado" rows="6" placeholder="El consentimiento aparecerá aquí y podrá ser editado si lo desea."></textarea>
+
+    <label for="notasClinicas">Notas Clínicas</label>
+    <textarea id="notasClinicas" rows="6"></textarea>
+
+    <button class="btn" onclick="guardarHistoriaClinica()">Guardar Historia Clínica</button>
+    <button class="btn print-btn" onclick="generarPDF()">Imprimir Historia Clínica</button>
+  </div>
+
+  <script>
+    let plantillasConsentimientos = JSON.parse(localStorage.getItem('plantillasConsentimientos')) || {};
+    let historiasClinicas = JSON.parse(localStorage.getItem('historiasClinicas')) || {};
+
+    function guardarPlantillaConsentimiento() {
+      const servicio = document.getElementById('nombreServicio').value.trim();
+      const consentimiento = document.getElementById('consentimientoServicio').value.trim();
+
+      if (!servicio || !consentimiento) {
+        alert("Completa ambos campos");
+        return;
+      }
+
+      plantillasConsentimientos[servicio] = consentimiento;
+      localStorage.setItem('plantillasConsentimientos', JSON.stringify(plantillasConsentimientos));
+      mostrarPlantillas();
+      actualizarSelectServicios();
+      alert("Plantilla guardada correctamente");
+      document.getElementById('nombreServicio').value = "";
+      document.getElementById('consentimientoServicio').value = "";
+    }
+
+    function mostrarPlantillas() {
+      const contenedor = document.getElementById('plantillasGuardadas');
+      contenedor.innerHTML = "<h4>Plantillas Registradas:</h4>";
+      for (const servicio in plantillasConsentimientos) {
+        const div = document.createElement('div');
+        div.innerHTML = `<strong>${servicio}</strong>: ${plantillasConsentimientos[servicio].slice(0, 60)}...`;
+        contenedor.appendChild(div);
+      }
+    }
+
+    function actualizarSelectServicios() {
+      const select = document.getElementById('selectServicio');
+      select.innerHTML = '<option value="">-- Selecciona --</option>';
+      for (const servicio in plantillasConsentimientos) {
+        const option = document.createElement('option');
+        option.value = servicio;
+        option.textContent = servicio;
+        select.appendChild(option);
+      }
+    }
+
+    function cargarConsentimientoServicio() {
+      const servicioSeleccionado = document.getElementById('selectServicio').value;
+      document.getElementById('consentimientoGenerado').value = plantillasConsentimientos[servicioSeleccionado] || "";
+    }
+
+    function guardarHistoriaClinica() {
+      const nombrePaciente = document.getElementById('nombrePaciente').value.trim();
+      const servicioSeleccionado = document.getElementById('selectServicio').value;
+      const consentimiento = document.getElementById('consentimientoGenerado').value.trim();
+      const notas = document.getElementById('notasClinicas').value.trim();
+
+      if (!nombrePaciente || !servicioSeleccionado || !consentimiento || !notas) {
+        alert("Completa todos los campos");
+        return;
+      }
+
+      const historiaClinica = {
+        nombrePaciente,
+        servicio: servicioSeleccionado,
+        consentimiento,
+        notas,
+        fecha: new Date().toLocaleDateString(),
+      };
+
+      historiasClinicas.push(historiaClinica);
+      localStorage.setItem('historiasClinicas', JSON.stringify(historiasClinicas));
+
+      alert("Historia clínica guardada correctamente");
+      document.getElementById
